@@ -86,6 +86,13 @@ function App() {
         tempMin: Math.floor(data.main.temp_min - 273.15),
         tempMax: Math.floor(data.main.temp_max - 273.15),
       };
+
+      const existingCity = weatherData.weather.find(city => city.cityName === newCityData.cityName);
+
+      if (existingCity) {
+        alert(`City already saved`);
+        return; // Prevent adding the duplicate city
+      }
   
       // Mettre à jour l'état de weatherData en ajoutant la nouvelle ville
       setWeatherData(prevData => ({
@@ -98,6 +105,8 @@ function App() {
     } catch (error) {
       console.error("Error adding city:", error);
     }
+
+  
   };
   
   
