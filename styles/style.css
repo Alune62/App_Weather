@@ -77,7 +77,7 @@ input:focus {
 	justify-content: center;
 	align-items: center;
 	width: 100%;
-	max-width: 1200px; 
+	max-width: 1400px; 
 	margin: 0 auto; 
 	padding: 10px; 
   }
@@ -201,4 +201,8 @@ input:focus {
 	font-size: 18px;
 	color: #1A4DE4;
 	font-weight: bold;
+}
+
+.loading{
+	color: white;
 }

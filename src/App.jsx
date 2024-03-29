@@ -1,21 +1,20 @@
-import '../styles/style.css';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-// import Login from './login';
+import AddCity from './AddCity';
+import useLocation from './location'; 
 
 function App() {
-  const [weatherData, setWeatherData] = useState(null);
-  const [userLocation, setUserLocation] = useState(null);
-  const [cityNameInput, setCityNameInput] = useState('');
+  const [weatherData, setWeatherData] = useState([]);
+  const { userLocation, getUserLocation } = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [connected, setConnected] = useState(false);
+  
 
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchWeatherData();
-    // Vérifier l'état de connexion stocké dans le stockage local lors du chargement initial de l'application
     const isConnected = localStorage.getItem('connected');
     if (isConnected) {
       setConnected(true);
@@ -25,7 +24,7 @@ function App() {
   const fetchWeatherData = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('https://backend-weather-3ngp8r2m2-alune62.vercel.app/weather');
+      const response = await fetch('https://backend-weather-app-w4sa-a4b1rk2gv-alune62s-projects.vercel.app/weather');
       const data = await response.json();
       setWeatherData(data);
     } catch (error) {
@@ -35,89 +34,52 @@ function App() {
       setIsLoading(false);
     }
 
-    // Récupérer la position de l'utilisateur lors du chargement initial
     getUserLocation();
   };
 
-  const getUserLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        const { latitude, longitude } = position.coords;
-        const API_KEY = 'ce7418650c86eae6629dfcfdda141c14';
-        fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}`)
-          .then(response => response.json())
-          .then(data => {
-            const userLocationData = {
-              cityName: data.name,
-              main: data.weather[0].main,
-              description: data.weather[0].description,
-              temp: Math.floor(data.main.temp - 273.15),
-              tempMin: Math.floor(data.main.temp_min - 273.15),
-              tempMax: Math.floor(data.main.temp_max - 273.15),
-            };
-            setUserLocation(userLocationData);
-          })
-          .catch(error => {
-            console.error("Error fetching user's weather:", error);
-          });
-      });
-    }
-  };
 
-  const addCity = async () => {
+
+  const addCity = async (cityName) => {
     if (!connected) {
       alert("Vous devez vous connecter d'abord");
       navigate("/login");
       return;
     }
-  
-    if (!cityNameInput) return;
-  
+
+    if (!cityName) return;
+
     try {
-      const YOUR_API_KEY = 'ce7418650c86eae6629dfcfdda141c14';
-      const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${cityNameInput}&appid=${YOUR_API_KEY}`);
+      const response = await fetch(`https://backend-weather-app-w4sa-a4b1rk2gv-alune62s-projects.vercel.app/weather`, {
+        method: 'POST',
+        headers: {
+          'Content-type': 'application/json; charset=UTF-8',
+        },
+        body: JSON.stringify({ cityName: cityName })
+      });
       const data = await response.json();
-  
-      const newCityData = {
-        cityName: data.name,
-        main: data.weather[0].main,
-        description: data.weather[0].description,
-        temp: Math.floor(data.main.temp - 273.15),
-        tempMin: Math.floor(data.main.temp_min - 273.15),
-        tempMax: Math.floor(data.main.temp_max - 273.15),
-      };
-
-      const existingCity = weatherData.weather.find(city => city.cityName === newCityData.cityName);
-
-      if (existingCity) {
-        alert(`City already saved`);
-        return; // Prevent adding the duplicate city
-      }
-  
-      // Mettre à jour l'état de weatherData en ajoutant la nouvelle ville
-      setWeatherData(prevData => ({
+      console.log(data);
+      if(data.result){
+        setWeatherData(prevData => ({
         ...prevData,
-        weather: [...prevData.weather, newCityData]
+        weather: [...prevData.weather, data.weather]
       }));
-  
-      // Réinitialiser le champ de saisie de la ville
-      setCityNameInput('');
+      } else {
+        setError(data.error)
+        alert("cette Ville existe déjà")
+      }
+      
     } catch (error) {
       console.error("Error adding city:", error);
     }
-
-  
   };
-  
-  
 
   const deleteCity = (cityName) => {
     if (window.confirm("Are you sure you want to delete this city?")) {
-      fetch(`https://backend-weather-3ngp8r2m2-alune62.vercel.app/weather/${cityName}`, { method: 'DELETE' })
+      fetch(`https://backend-weather-app-w4sa-a4b1rk2gv-alune62s-projects.vercel.app/weather/${cityName}`, { method: 'DELETE' })
         .then(response => response.json())
         .then(data => {
           if (data.result) {
-            fetchWeatherData(); // Rafraîchir les données après la suppression
+            fetchWeatherData();
           }
         })
         .catch(error => {
@@ -127,19 +89,14 @@ function App() {
   };
 
   const handleUserButtonClick = () => {
-    // Rediriger vers la page de connexion si l'utilisateur n'est pas connecté, sinon déconnecter l'utilisateur
     if (connected) {
-      // Supprimer l'état de connexion du stockage local
       localStorage.removeItem('connected');
       setConnected(false);
-      // Rediriger l'utilisateur vers la page de connexion après déconnexion
       navigate("/");
     } else {
       navigate("/login");
     }
   };
-
- 
 
   return (
     <div>
@@ -152,21 +109,12 @@ function App() {
         </Link>
 
         <div className="headerDiv">
-          <input
-            id="cityNameInput"
-            type="text"
-            placeholder="Add new city"
-            value={cityNameInput}
-            onChange={(e) => setCityNameInput(e.target.value)}
-          />
-          <button id="addCity" onClick={addCity}>
-            <img id="glass" src="images/glass.png" alt="Search" />
-          </button>
+          <AddCity onAddCity={addCity} />
         </div>
         <button onClick={handleUserButtonClick} id="userButton">
-        <img id="userIcon" src="images/user.png" alt="User" />
-        {connected ? "Logout" : "Login"}
-      </button>
+          <img id="userIcon" src="images/user.png" alt="User" />
+          {connected ? "Logout" : "Login"}
+        </button>
       </div>
 
       <div id="cityList">
@@ -181,7 +129,7 @@ function App() {
               <span>-</span>
               <p className="tempMax">{userLocation.tempMax}°</p>
             </div>
-            <button className="deleteCity" onClick={() => deleteCity(userLocation.cityName)}>Delete</button>
+            <button className="deleteCity">Delete</button>
           </div>
         )}
 
